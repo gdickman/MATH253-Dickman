@@ -1,2 +1,22 @@
-# Analyzing Kobe Bryant's Career Shot Selection
+# **Analyzing Kobe Bryant's Career Shot Selection**
 ## Dylan Kilgour & Grace Dickman
+
+```{r}
+library(ggplot2)
+```
+
+
+### **Introduction**
+The data set we chose from Kaggle contains every shot from Kobe Bryant's NBA career accompanied by statistics that give various descriptions about the shot, i.e. location, make, miss, game situation.  Using the statistics provided, we will attempt to build a model that will be able to predict a made or missed shot given certain parameters. The data set we are using contains over 30,000 data points so our model has the potential to be extremely accurate.  Some of the variables we will look at will be `action-type`, `combined-shot-type`, `lat`, `loc_x`, `loc_y`, `minutes_remaining`, `seconds_remaining` and `shot_zone_area`.  We will start with these to create a simple model and if able, we can make a more complex model where shots can be affected by the specific opponent and if the shot is taken in the playoffs.
+
+### **Finding Relationships between Variables**
+Before we can build the model, we must look at which variables have an impact on which shots Kobe sinks.  We can begin by constructing simple linear models.
+
+```{r}
+kobedata <- read.csv("~/DylanProject/kobedata.csv")
+mod1 <- lm(shot_made_flag ~ combined_shot_type, data = kobedata)
+summary(mod1)
+mod2 <- lm(shot_made_flag ~ loc_x + loc_y, data = kobedata)
+summary(mod2)
+```
+

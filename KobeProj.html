@@ -119,9 +119,66 @@ $(document).ready(function () {
 
 
 <div id="analyzing-kobe-bryants-career-shot-selection" class="section level1">
-<h1>Analyzing Kobe Bryant’s Career Shot Selection</h1>
+<h1><strong>Analyzing Kobe Bryant’s Career Shot Selection</strong></h1>
 <div id="dylan-kilgour-grace-dickman" class="section level2">
 <h2>Dylan Kilgour &amp; Grace Dickman</h2>
+<pre class="r"><code>library(ggplot2)</code></pre>
+<div id="introduction" class="section level3">
+<h3><strong>Introduction</strong></h3>
+<p>The data set we chose from Kaggle contains every shot from Kobe Bryant’s NBA career accompanied by statistics that give various descriptions about the shot, i.e. location, make, miss, game situation. Using the statistics provided, we will attempt to build a model that will be able to predict a made or missed shot given certain parameters. The data set we are using contains over 30,000 data points so our model has the potential to be extremely accurate. Some of the variables we will look at will be <code>action-type</code>, <code>combined-shot-type</code>, <code>lat</code>, <code>loc_x</code>, <code>loc_y</code>, <code>minutes_remaining</code>, <code>seconds_remaining</code> and <code>shot_zone_area</code>. We will start with these to create a simple model and if able, we can make a more complex model where shots can be affected by the specific opponent and if the shot is taken in the playoffs.</p>
+</div>
+<div id="finding-relationships-between-variables" class="section level3">
+<h3><strong>Finding Relationships between Variables</strong></h3>
+<p>Before we can build the model, we must look at which variables have an impact on which shots Kobe sinks. We can begin by constructing simple linear models.</p>
+<pre class="r"><code>kobedata &lt;- read.csv(&quot;~/DylanProject/kobedata.csv&quot;)
+mod1 &lt;- lm(shot_made_flag ~ combined_shot_type, data = kobedata)
+summary(mod1)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = shot_made_flag ~ combined_shot_type, data = kobedata)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -0.9280 -0.3911 -0.3911  0.6089  0.6513 
+## 
+## Coefficients:
+##                             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)                  0.79167    0.04398  17.999  &lt; 2e-16 ***
+## combined_shot_typeDunk       0.13636    0.04641   2.938  0.00331 ** 
+## combined_shot_typeHook Shot -0.25623    0.06134  -4.177 2.96e-05 ***
+## combined_shot_typeJump Shot -0.40060    0.04412  -9.080  &lt; 2e-16 ***
+## combined_shot_typeLayup     -0.22657    0.04456  -5.085 3.71e-07 ***
+## combined_shot_typeTip Shot  -0.44298    0.05884  -7.529 5.28e-14 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4818 on 25691 degrees of freedom
+##   (5000 observations deleted due to missingness)
+## Multiple R-squared:  0.06077,    Adjusted R-squared:  0.06059 
+## F-statistic: 332.5 on 5 and 25691 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>mod2 &lt;- lm(shot_made_flag ~ loc_x + loc_y, data = kobedata)
+summary(mod2)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = shot_made_flag ~ loc_x + loc_y, data = kobedata)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -0.5599 -0.4601 -0.3333  0.5029  0.8387 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  5.225e-01  4.422e-03 118.166   &lt;2e-16 ***
+## loc_x       -1.559e-05  2.787e-05  -0.559    0.576    
+## loc_y       -8.353e-04  3.480e-05 -24.006   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4916 on 25694 degrees of freedom
+##   (5000 observations deleted due to missingness)
+## Multiple R-squared:  0.02194,    Adjusted R-squared:  0.02186 
+## F-statistic: 288.1 on 2 and 25694 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
 </div>
 </div>
 

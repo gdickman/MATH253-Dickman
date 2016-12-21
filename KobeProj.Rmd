@@ -9,14 +9,83 @@ library(ggplot2)
 ### **Introduction**
 The data set we chose from Kaggle contains every shot from Kobe Bryant's NBA career accompanied by statistics that give various descriptions about the shot, i.e. location, make, miss, game situation.  Using the statistics provided, we will attempt to build a model that will be able to predict a made or missed shot given certain parameters. The data set we are using contains over 30,000 data points so our model has the potential to be extremely accurate.  Some of the variables we will look at will be `action-type`, `combined-shot-type`, `lat`, `loc_x`, `loc_y`, `minutes_remaining`, `seconds_remaining` and `shot_zone_area`.  We will start with these to create a simple model and if able, we can make a more complex model where shots can be affected by the specific opponent and if the shot is taken in the playoffs.
 
+First we can make a simple shot chart of all of Kobe's makes and misses in his career. A value of 1 indicates a made shot, where a value of 0 indicates a missed shot.
+
+```{r}
+# Court
+kobedata <- read.csv("~/DylanProject/kobedata.csv")
+kobedata_v2 <- kobedata[complete.cases(kobedata),]
+require(RCurl)
+library(grid)
+library(jpeg)
+ 
+# half court image
+courtImg.URL <- "https://thedatagame.files.wordpress.com/2016/03/nba_court.jpg"
+court <- rasterGrob(readJPEG(getURLContent(courtImg.URL)),
+           width=unit(1,"npc"), height=unit(1,"npc"))
+
+
+ggplot(kobedata_v2, aes(x=loc_x, y=loc_y)) +
+         geom_point(aes(colour = shot_made_flag)) + ggtitle(paste("Kobe Bryant Career Shot Chart"))
+```
+
+To see a smaller sample, we can look at a random sample of 1000 shots.
+
+```{r}
+kobesamp_v2 <- kobedata_v2[sample(1:nrow(kobedata_v2), 1000,
+  	replace=FALSE),]
+
+ggplot(kobesamp_v2, aes(x=loc_x, y=loc_y)) +
+         geom_point(aes(colour = shot_made_flag)) + ggtitle(paste("Kobe Random Sample Shot Chart"))
+```
+
+
 ### **Finding Relationships between Variables**
+#### Simple Linear Models
 Before we can build the model, we must look at which variables have an impact on which shots Kobe sinks.  We can begin by constructing simple linear models.
 
 ```{r}
-kobedata <- read.csv("~/DylanProject/kobedata.csv")
-mod1 <- lm(shot_made_flag ~ combined_shot_type, data = kobedata)
+mod1 <- lm(shot_made_flag ~ combined_shot_type, data = kobedata_v2)
 summary(mod1)
-mod2 <- lm(shot_made_flag ~ loc_x + loc_y, data = kobedata)
+```
+
+An interpretation of this linear model is that dunks are Kobe's most effective shot, and his likelihood of making it decreases for all other shot types.  Tip-shots are his least effective shot as this model shows.
+
+```{r}
+mod2 <- lm(shot_made_flag ~ loc_x + loc_y, data = kobedata_v2)
 summary(mod2)
 ```
 
+This model gives an intuitive result that Kobe's made shots decrease the farther away from the basket he is.
+
+#### Logistial Regression Models
+
+Now we will look at a logistical regression model because our outcome variable is binary.  We can start with `shot_made_flag` based on `loc_x` and `loc_y`.
+```{r}
+glmmod1 <- glm(shot_made_flag ~ loc_x + loc_y,data=kobedata_v2,family=binomial())
+summary(glmmod1)
+```
+We see similar results from the linear model previously made --- Kobe's shots go in less the further he is from the basket.
+
+
+If we want to see how Kobe performs throughout the game, we can look at `minutes_remaining` and how it affects `shot_made_flag`.
+```{r}
+glmmod2 <- glm(shot_made_flag ~ minutes_remaining, data = kobedata_v2, family = binomial())
+summary(glmmod2)
+```
+This simple model tells us that the more time left in the quarter, the more Kobe makes his shots.
+
+We'd like to see if a logistical regression model will be more accurate when looking at `combined_shot_type` and its affect on `shot_made_flag`.
+```{r}
+glmmod3 <- glm(shot_made_flag ~ combined_shot_type, data = kobedata_v2, family = binomial())
+summary(glmmod3)
+```
+We see again that Kobe's dunk is his most effective shot, layups are his second most effective, hook shots are third, jumpers fourth, and tip shots are his least effective shot.
+
+#### Adding Interaction Terms
+Our models have yet to include interaction terms.  Now we can see if we can improve these simple relationships by adding in interaction.  First we will look at an interaction between `combined_shot_type` and `minutes_remaining`.
+```{r}
+glmint1 <- glm(shot_made_flag ~ combined_shot_type + minutes_remaining + combined_shot_type*minutes_remaining, data = kobedata_v2, family = binomial())
+summary(glmint1)
+```
+Shot types seem to be affected by the minutes remaining in the game, but none of the results are statistically significant.  Therefore, we cannot consider these results to be useful.

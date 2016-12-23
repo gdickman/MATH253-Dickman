@@ -3,6 +3,8 @@
 
 ```{r}
 library(ggplot2)
+library(MASS)
+library(caret)
 ```
 
 
@@ -15,6 +17,7 @@ First we can make a simple shot chart of all of Kobe's makes and misses in his c
 # Court
 kobedata <- read.csv("~/DylanProject/kobedata.csv")
 kobedata_v2 <- kobedata[complete.cases(kobedata),]
+kobedata_v2$made_or_missed <- factor(kobedata_v2$shot_made_flag)
 require(RCurl)
 library(grid)
 library(jpeg)
@@ -25,8 +28,8 @@ court <- rasterGrob(readJPEG(getURLContent(courtImg.URL)),
            width=unit(1,"npc"), height=unit(1,"npc"))
 
 
-ggplot(kobedata_v2, aes(x=loc_x, y=loc_y)) +
-         geom_point(aes(colour = shot_made_flag)) + ggtitle(paste("Kobe Bryant Career Shot Chart"))
+ggplot(kobedata_v2, aes(x=loc_x, y=loc_y)) + 
+  annotation_custom(court, -250, 250, -50, 420) + geom_point(aes(colour = made_or_missed)) + xlim(-250,250) + ylim(-50,420) + ggtitle(paste("Kobe Bryant Career Shot Chart")) 
 ```
 
 To see a smaller sample, we can look at a random sample of 1000 shots.
@@ -35,8 +38,8 @@ To see a smaller sample, we can look at a random sample of 1000 shots.
 kobesamp_v2 <- kobedata_v2[sample(1:nrow(kobedata_v2), 1000,
   	replace=FALSE),]
 
-ggplot(kobesamp_v2, aes(x=loc_x, y=loc_y)) +
-         geom_point(aes(colour = shot_made_flag)) + ggtitle(paste("Kobe Random Sample Shot Chart"))
+ggplot(kobesamp_v2, aes(x=loc_x, y=loc_y)) + 
+  annotation_custom(court, -250, 250, -50, 420) + geom_point(aes(colour = made_or_missed)) + xlim(-250,250) + ylim(-50,420) + ggtitle(paste("Kobe Random Sample Shot Chart"))
 ```
 
 
@@ -47,9 +50,16 @@ Before we can build the model, we must look at which variables have an impact on
 ```{r}
 mod1 <- lm(shot_made_flag ~ combined_shot_type, data = kobedata_v2)
 summary(mod1)
+
+
+kobesamp_v2 <- kobedata_v2[sample(1:nrow(kobedata_v2), 1000,
+  	replace=FALSE),]
+
+ggplot(kobesamp_v2, aes(x=loc_x, y=loc_y)) + 
+  annotation_custom(court, -250, 250, -50, 420) + geom_point(aes(colour = combined_shot_type, shape=made_or_missed)) + xlim(-250,250) + ylim(-50,420) + ggtitle(paste("Kobe Random Sample Shot Chart"))
 ```
 
-An interpretation of this linear model is that dunks are Kobe's most effective shot, and his likelihood of making it decreases for all other shot types.  Tip-shots are his least effective shot as this model shows.
+An interpretation of this linear model is that dunks are Kobe's most effective shot, and his makes decrease for all other shot types.  Tip-shots are his least effective shot as this model shows.  The random sample shot chart is adjusted to account for the shot types and whether Kobe made or missed.  This gives a good visual representation of the categories of our data and of the number of these respective shots Kobe was taking throughout his career.
 
 ```{r}
 mod2 <- lm(shot_made_flag ~ loc_x + loc_y, data = kobedata_v2)
@@ -89,3 +99,75 @@ glmint1 <- glm(shot_made_flag ~ combined_shot_type + minutes_remaining + combine
 summary(glmint1)
 ```
 Shot types seem to be affected by the minutes remaining in the game, but none of the results are statistically significant.  Therefore, we cannot consider these results to be useful.
+
+## **LDA and QDA**
+
+```{r}
+sample_size <- floor(0.75 * nrow(kobedata_v2))
+
+## setting the seed
+set.seed(123)
+train_ind <- sample(seq_len(nrow(kobedata_v2)), size = sample_size)
+
+train1 <- kobedata_v2[train_ind, ]
+test1 <- kobedata_v2[-train_ind, ]
+
+# LDA
+mod_LDA_one <- lda(shot_made_flag ~ minutes_remaining + seconds_remaining + season + shot_distance + game_id + opponent + shot_type, data = train1)
+mod_LDA_one
+test_LDA_one <- predict(mod_LDA_one, newdata = test1)
+
+
+
+# QDA
+mod_QDA_one <- qda(shot_made_flag ~ minutes_remaining + seconds_remaining + season + shot_distance + game_id + opponent + shot_type, data = train1)
+mod_QDA_one
+test_QDA_one <- predict(mod_LDA_one, newdata = test1)
+
+```
+
+
+
+```{r}
+# Table LDA  
+mod_LDA_one_table <- lda(shot_made_flag ~ minutes_remaining + seconds_remaining + season + shot_distance + game_id + opponent + shot_type, data = kobedata_v2)
+mod_LDA_one_table
+
+table(kobedata_v2$shot_made_flag, predict(mod_LDA_one_table)$class)
+table(predict(mod_LDA_one_table)$class == kobedata_v2$shot_made_flag) / nrow(kobedata_v2)
+
+made_shot <- kobedata_v2$shot_made_flag == 1
+predicts_make <- predict(mod_LDA_one_table)$class == 1
+table(made_shot, predicts_make) 
+
+# Test Error Rate
+mean(made_shot != predicts_make)
+
+```
+
+
+From our tables for the LDA, we can see that the accuracy is at 60% with a test error rate of 40%.  Looking at the sensitivity, we see that it is 4,690/11,465.  Looking at the specificity, we see that it is 10,738/14,232.
+
+
+```{r}
+# Table QDA  
+mod_QDA_one_table <- qda(shot_made_flag ~ minutes_remaining + seconds_remaining + season + shot_distance + game_id + opponent + shot_type, data = kobedata_v2)
+mod_QDA_one_table
+
+table(kobedata_v2$shot_made_flag, predict(mod_QDA_one_table)$class)
+table(predict(mod_QDA_one_table)$class == kobedata_v2$shot_made_flag) / nrow(kobedata_v2)
+
+made_shot <- kobedata_v2$shot_made_flag == 1
+predicts_make <- predict(mod_QDA_one_table)$class == 1
+table(made_shot, predicts_make) 
+
+# Test Error Rate
+mean(made_shot != predicts_make)
+
+```
+
+
+From our tables for the QDA, we can see that the accuracy is at 54.9% with a test error rate of 45.1%.  Looking at the sensitivity, we see that it is 7,521/11,465.  Looking at the specificity, we see that it is 6,583/14,232.
+
+## **Conclusions**
+We decided to try to model Kobe's shot selection with LDA and QDA.  We also changed which variables we wanted to contribute as explanatory variables because we realized that `combined_shot_type` might not accurately explain whether the shot was made or missed.  After running through the analysis, it seems that LDA is better because it has a lower testing error rate and higher accuracy percentage.  With more time, it would be interesting to see if logistic regression or KNN does a better job modeling the data.
